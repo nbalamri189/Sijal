@@ -1,11 +1,11 @@
 import {
   ALPHABET, LETTER_NAMES, arNum, firstLetterIndex, letterIndexFromEnd, letterSpan,
-} from "./arabic.js";
-import { letterCount, loadIndex, matchVerse, pickVerse } from "./db.js";
+} from "./arabic.js?v=6";
+import { letterCount, loadIndex, matchVerse, pickVerse } from "./db.js?v=6";
 import {
   DAILY_SIZE, SITE_URL, arCount, challengeURL, clearChallengeFromURL, copyText, dailyLetters, dailyNumber,
   gridEmoji, msUntilTomorrow, openWhatsApp, readChallenge, renderResultImage, shareImage, verseShareText,
-} from "./share.js";
+} from "./share.js?v=6";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -28,7 +28,7 @@ const MODES = {
   },
   journey: {
     title: "رحلة الحروف",
-    desc: "الحروف بالترتيب الهجائي من الألف إلى الياء: اذكر بيتًا يبدأ بكل حرف. التخطي أو انتهاء الوقت يكلّفك قلبًا وينقلك إلى الحرف التالي.",
+    desc: "الحروف بالترتيب الهجائي من الألف إلى الياء: اذكر بيتًا يبدأ بكل حرف، بلا وقت محدد. التخطي يكلّفك قلبًا وينقلك إلى الحرف التالي.",
   },
 };
 const DIFFICULTY_HINTS = {
@@ -49,9 +49,11 @@ function store(name, value) {
 }
 
 const settings = Object.assign(
-  { mode: "duel", difficulty: "medium", time: 60, lives: 3, start: "random", players: ["اللاعب الأول", "اللاعب الثاني"] },
+  { mode: "duel", difficulty: "medium", timer: "off", time: 60, lives: 3, start: "random", players: ["اللاعب الأول", "اللاعب الثاني"] },
   store("settings") || {},
 );
+
+if (![15, 30, 45, 60, 90, 120].includes(settings.time)) settings.time = 60;
 
 // ---------- helpers ----------
 const escapeHTML = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -140,6 +142,7 @@ function openSetup(mode) {
   $("#field-players").hidden = mode !== "duel";
   $("#field-difficulty").hidden = mode !== "ai";
   $("#field-start").hidden = mode === "journey";
+  $("#field-time").hidden = mode !== "duel";
   $("#btn-start").textContent = mode === "journey" ? "ابدأ الرحلة" : "ابدأ المساجلة";
   syncSegmented();
   renderPlayers();
@@ -152,6 +155,7 @@ function syncSegmented() {
     for (const b of group.querySelectorAll("button")) b.classList.toggle("on", b.dataset.value === value);
   }
   $("#difficulty-hint").textContent = DIFFICULTY_HINTS[settings.difficulty];
+  $("#time-options").hidden = settings.timer !== "on";
 }
 
 for (const group of $$(".segmented")) {
@@ -217,6 +221,8 @@ function newGame(mode = settings.mode, challenge = null) {
   if (mode === "ai") players.push({ name: AI_NAME, color: COLORS[1], lives: Infinity, score: 0, verses: 0, ai: true, out: false });
 
   stopTimer();
+  $("#timer").hidden = true;
+  $("#clock").hidden = true;
   game = {
     mode,
     players,
@@ -231,7 +237,8 @@ function newGame(mode = settings.mode, challenge = null) {
     journeyIdx: 0,
     hints: 0,
     hinted: new Set(),
-    time: mode === "daily" ? 0 : settings.time,
+    // Only the two-player duel has a timer, and only when the players ask for one.
+    time: mode === "duel" && settings.timer === "on" ? settings.time : 0,
     challenge,
     token: 0,
     busy: false,
@@ -665,7 +672,7 @@ function endGame() {
     stats.push([arNum(human.score), "نقاطك"], [arNum(Math.max(best, human.score)), "أفضل نتيجة"], [arNum(human.verses), "أبياتك"]);
     if (game.hints) stats.push([arNum(game.hints), "تلميحات"]);
     const challenge = (name) => ({
-      m: game.mode, s: human.score, n: name, t: settings.time, l: settings.lives,
+      m: game.mode, s: human.score, n: name, l: settings.lives,
       ...(game.mode === "ai" ? { d: settings.difficulty } : { k: human.verses }),
     });
     prepareShare({
@@ -842,7 +849,6 @@ if (incoming) {
     const challenge = incoming.m === "daily" && incoming.day !== dailyNumber() ? null : incoming;
     if (incoming.m === "daily") return openDaily(challenge);
     settings.mode = incoming.m;
-    settings.time = incoming.t;
     settings.lives = incoming.l;
     if (incoming.d) settings.difficulty = incoming.d;
     await indexReady;

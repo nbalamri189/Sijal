@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
   <main id="app">
@@ -98,13 +98,22 @@
           <p class="hint-text" id="difficulty-hint"></p>
         </div>
 
-        <div class="field">
-          <span class="label">وقت كل دور</span>
-          <div class="segmented" data-setting="time">
-            <button data-value="30">٣٠ ث</button>
-            <button data-value="60" class="on">٦٠ ث</button>
-            <button data-value="90">٩٠ ث</button>
-            <button data-value="0">بلا وقت</button>
+        <div class="field" id="field-time">
+          <span class="label">المؤقّت</span>
+          <div class="segmented" data-setting="timer">
+            <button data-value="off" class="on">بلا مؤقّت</button>
+            <button data-value="on">مع مؤقّت</button>
+          </div>
+          <div id="time-options" hidden>
+            <span class="label sub-label">وقت كل دور</span>
+            <div class="segmented" data-setting="time">
+              <button data-value="15">١٥ ث</button>
+              <button data-value="30">٣٠ ث</button>
+              <button data-value="45">٤٥ ث</button>
+              <button data-value="60" class="on">دقيقة</button>
+              <button data-value="90">دقيقة ونصف</button>
+              <button data-value="120">دقيقتان</button>
+            </div>
           </div>
         </div>
 
@@ -213,8 +222,8 @@
         <li>لا تُحتسب حروف الإطلاق والوصل في آخر البيت، فـ«جاهلا» تنتهي باللام، و«سراجُها» بالجيم.</li>
         <li>الهمزة والألف حرف واحد، والتاء المربوطة تُعامل هاءً، والألف المقصورة ألفًا.</li>
         <li>لا يُقبل إلا بيت موجود في قاعدة الأبيات، ولا يُكرَّر بيت في المساجلة نفسها. الأخطاء الإملائية اليسيرة مقبولة.</li>
-        <li>من انتهى وقته أو قال «أعجزتني» خسر قلبًا، وانتقل الحرف نفسه إلى من بعده.</li>
-        <li>النقاط: ١٠ لكل بيت، وزيادة للحروف النادرة وللسرعة.</li>
+        <li>لا وقت في اللعب الفردي. وفي المساجلة بين لاعبين يُختار المؤقّت ومدته، فمن انتهى وقته أو قال «أعجزتني» خسر قلبًا، وانتقل الحرف نفسه إلى من بعده.</li>
+        <li>النقاط: ١٠ لكل بيت، وزيادة للحروف النادرة، وللسرعة إن اختار اللاعبون المؤقّت.</li>
       </ol>
       <h3>اللعب الفردي</h3>
       <p><b>تحدّي الحاسوب:</b> تبدأ أنت، ثم يردّ الحاسوب ببيت يبدأ برويّ بيتك، وعليك أن تجيبه من رويّ بيته. في المستوى الصعب يختار أبياتًا تنتهي بحروف نادرة.</p>
@@ -231,6 +240,6 @@
 
   <div class="toast" id="toast" role="status" hidden></div>
 
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=6"></script>
 </body>
 </html>

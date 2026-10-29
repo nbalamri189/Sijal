@@ -42,6 +42,8 @@ python3 -m http.server 8000
 اللعبة منشورة على GitHub Pages: https://nbalamri189.github.io/Sijal/
 (Settings ← Pages ← Deploy from a branch ← `main` / root). وسوم المعاينة في `index.html` تشير إلى هذا الرابط.
 
+بعد أي تعديل في `css/` أو `js/` شغّل `python3 tools/bump_version.py` قبل الرفع، ليحمّل الزوار الملفات الجديدة فورًا بدل النسخة المخزّنة في متصفحاتهم.
+
 ## إعادة بناء قاعدة الأبيات
 
 ```sh

@@ -1,11 +1,11 @@
 // Sharing: challenge links, the daily challenge, WhatsApp texts and the result image.
-import { ALPHABET, arNum } from "./arabic.js";
+import { ALPHABET, arNum } from "./arabic.js?v=6";
 
 export const SITE_URL = location.origin + location.pathname.replace(/index\.html$/, "");
 
 // ---------- challenge links ----------
 // A challenge travels in the URL as ?c=<base64url JSON>, e.g.
-// {m:"ai", s:94, n:"سارة", d:"hard", t:60, l:3} or {m:"daily", day:3, s:80, g:"11h0111"}.
+// {m:"ai", s:94, n:"سارة", d:"hard", l:3} or {m:"daily", day:3, s:80, g:"11h0111"}.
 
 function toBase64Url(text) {
   const bytes = new TextEncoder().encode(text);
@@ -37,10 +37,7 @@ export function readChallenge() {
       n: typeof c.n === "string" ? c.n.trim().slice(0, 20) : "",
     };
     if (c.m === "ai") out.d = ["easy", "medium", "hard"].includes(c.d) ? c.d : "medium";
-    if (c.m !== "daily") {
-      out.t = [0, 30, 60, 90].includes(c.t) ? c.t : 60;
-      out.l = [1, 3, 5].includes(c.l) ? c.l : 3;
-    }
+    if (c.m !== "daily") out.l = [1, 3, 5].includes(c.l) ? c.l : 3;
     if (c.m === "daily") {
       out.day = Math.floor(Number(c.day) || 0);
       out.g = typeof c.g === "string" ? c.g.replace(/[^01h]/g, "").slice(0, DAILY_SIZE) : "";

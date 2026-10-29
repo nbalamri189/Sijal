@@ -160,6 +160,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .field { margin: 18px 0; }
 .label { display: block; font-weight: 600; margin-bottom: 8px; }
+#time-options { margin-top: 12px; }
+.sub-label { font-weight: 500; font-size: 0.92rem; color: var(--ink-soft); }
 .hint-text { color: var(--ink-soft); font-size: 0.88rem; margin: 6px 0 0; }
 
 .segmented { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -172,7 +174,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .segmented button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 
-.player-list { display: grid; gap: 8px; margin-bottom: 8px; }
+.player-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 8px; }
 .player-row { display: flex; gap: 8px; align-items: center; }
 .player-row input {
   flex: 1; min-width: 0;
