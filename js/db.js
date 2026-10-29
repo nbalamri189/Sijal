@@ -1,5 +1,5 @@
 // Verse database: lazy-loaded shards keyed by the first letters of a verse.
-import { key, startLetter, similarity } from "./arabic.js?v=6";
+import { key, startLetter, similarity } from "./arabic.js?v=7";
 
 let index = null;
 const shardNames = new Set();

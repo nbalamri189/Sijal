@@ -1,11 +1,11 @@
 import {
   ALPHABET, LETTER_NAMES, arNum, firstLetterIndex, letterIndexFromEnd, letterSpan,
-} from "./arabic.js?v=6";
-import { letterCount, loadIndex, matchVerse, pickVerse } from "./db.js?v=6";
+} from "./arabic.js?v=7";
+import { letterCount, loadIndex, matchVerse, pickVerse } from "./db.js?v=7";
 import {
   DAILY_SIZE, SITE_URL, arCount, challengeURL, clearChallengeFromURL, copyText, dailyLetters, dailyNumber,
   gridEmoji, msUntilTomorrow, openWhatsApp, readChallenge, renderResultImage, shareImage, verseShareText,
-} from "./share.js?v=6";
+} from "./share.js?v=7";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -119,6 +119,7 @@ const pointsText = (n) => arCount(n, "نقطة واحدة", "نقطتين", "ن�
 // ---------- screens ----------
 function show(name) {
   if (name === "home") renderDailyCard();
+  if (name !== "game") setTimeout(applyUpdate);
   for (const s of $$(".screen")) s.classList.toggle("active", s.id === `screen-${name}`);
   document.body.classList.toggle("playing", name === "game");
   window.scrollTo(0, 0);
@@ -890,6 +891,36 @@ if (Recognition) {
     rec.start();
   });
 }
+
+// ---------- updates ----------
+// Phones often restore an old tab from memory instead of reloading it, which
+// keeps an outdated copy of the game running. Ask the server (bypassing the
+// cache) which version is current, and move to it whenever no game is running.
+const APP_VERSION = 7;
+let newerVersion = 0;
+
+async function checkForUpdate() {
+  try {
+    const res = await fetch(`version.json?t=${Date.now()}`, { cache: "no-store" });
+    const { v } = await res.json();
+    if (v > APP_VERSION) newerVersion = v;
+  } catch {
+    return;
+  }
+  applyUpdate();
+}
+
+function applyUpdate() {
+  if (!newerVersion || $("#screen-game").classList.contains("active")) return;
+  const url = new URL(location.href);
+  if (url.searchParams.get("r") === String(newerVersion)) return; // already tried once
+  url.searchParams.set("r", newerVersion);
+  location.replace(url);
+}
+
+checkForUpdate();
+document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && checkForUpdate());
+window.addEventListener("pageshow", (e) => e.persisted && checkForUpdate());
 
 // ---------- hosting badge ----------
 // Netlify pins a badge to the bottom corner; keep the game buttons clear of it.
