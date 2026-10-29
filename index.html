@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>مساجلة</title>
+  <meta name="description" content="مساجلة شعرية: كل لاعب يذكر بيتًا يبدأ بالحرف الذي انتهى به بيت خصمه. أبيات حقيقية من دواوين الشعر العربي.">
+  <meta name="theme-color" content="#f4ecdc" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16130e" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23a5761f'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle' fill='%23fff8e8' font-family='serif'%3E%D8%B3%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="app">
+
+    <!-- الرئيسية -->
+    <section id="screen-home" class="screen active" aria-labelledby="home-title">
+      <header class="hero">
+        <p class="hero-kicker">لعبة الشعر العربي</p>
+        <h1 id="home-title" class="logo">مساجلة</h1>
+        <figure class="hero-verse">
+          <blockquote>
+            <span>وَإِنَّ أَشعَرَ بَيتٍ أَنتَ قائِلُهُ</span>
+            <span>بَيتٌ يُقالُ إِذا أَنشَدتَهُ صَدَقا</span>
+          </blockquote>
+          <figcaption><a href="https://www.aldiwan.net/poem21516.html" target="_blank" rel="noopener">حسان بن ثابت</a></figcaption>
+        </figure>
+        <p class="hero-sub">اذكر بيتًا يبدأ بالحرف الذي انتهى به بيت خصمك. كل الأبيات حقيقية، تُتحقَّق من دواوين الشعراء.</p>
+      </header>
+
+      <div class="modes">
+        <button class="mode-card" data-mode="duel">
+          <span class="mode-icon" aria-hidden="true">⚔</span>
+          <span class="mode-title">مساجلة بين لاعبين</span>
+          <span class="mode-desc">من لاعبَين إلى أربعة على الجهاز نفسه. يتناوبون الأبيات، ومن عجز عن الجواب خسر قلبًا.</span>
+        </button>
+        <button class="mode-card" data-mode="ai">
+          <span class="mode-icon" aria-hidden="true">✦</span>
+          <span class="mode-title">تحدّي الحاسوب</span>
+          <span class="mode-desc">لعب فردي: تساجل الحاسوب، فيردّ عليك ببيت حقيقي، وعليك أن تجيبه من حيث انتهى.</span>
+        </button>
+        <button class="mode-card" data-mode="journey">
+          <span class="mode-icon" aria-hidden="true">أ‑ي</span>
+          <span class="mode-title">رحلة الحروف</span>
+          <span class="mode-desc">لعب فردي: بيت لكل حرف من الألف إلى الياء بالترتيب الهجائي. كم حرفًا تقطع قبل أن تنفد قلوبك؟</span>
+        </button>
+      </div>
+
+      <div class="home-actions">
+        <button class="btn ghost" id="btn-rules">قواعد اللعبة</button>
+      </div>
+      <p class="db-stats" id="db-stats">جارٍ تحميل قاعدة الأبيات…</p>
+    </section>
+
+    <!-- الإعداد -->
+    <section id="screen-setup" class="screen" aria-labelledby="setup-title">
+      <div class="panel">
+        <button class="back" data-go="home" aria-label="رجوع">→ رجوع</button>
+        <h2 id="setup-title">إعداد اللعبة</h2>
+        <p class="setup-desc" id="setup-desc"></p>
+
+        <div class="field" id="field-players">
+          <span class="label">اللاعبون</span>
+          <div id="player-list" class="player-list"></div>
+          <button class="btn small ghost" id="btn-add-player">+ أضف لاعبًا</button>
+        </div>
+
+        <div class="field" id="field-difficulty">
+          <span class="label">مستوى الحاسوب</span>
+          <div class="segmented" data-setting="difficulty">
+            <button data-value="easy">سهل</button>
+            <button data-value="medium" class="on">متوسط</button>
+            <button data-value="hard">صعب</button>
+          </div>
+          <p class="hint-text" id="difficulty-hint"></p>
+        </div>
+
+        <div class="field">
+          <span class="label">وقت كل دور</span>
+          <div class="segmented" data-setting="time">
+            <button data-value="30">٣٠ ث</button>
+            <button data-value="60" class="on">٦٠ ث</button>
+            <button data-value="90">٩٠ ث</button>
+            <button data-value="0">بلا وقت</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label">القلوب لكل لاعب</span>
+          <div class="segmented" data-setting="lives">
+            <button data-value="1">١</button>
+            <button data-value="3" class="on">٣</button>
+            <button data-value="5">٥</button>
+          </div>
+        </div>
+
+        <div class="field" id="field-start">
+          <span class="label">الحرف الأول</span>
+          <div class="segmented" data-setting="start">
+            <button data-value="random" class="on">حرف عشوائي</button>
+            <button data-value="free">بيت حرّ</button>
+          </div>
+        </div>
+
+        <button class="btn primary wide" id="btn-start">ابدأ المساجلة</button>
+      </div>
+    </section>
+
+    <!-- اللعب -->
+    <section id="screen-game" class="screen" aria-label="المساجلة">
+      <div class="game-top">
+        <button class="icon-btn" id="btn-quit" aria-label="إنهاء اللعبة">✕</button>
+        <div class="scoreboard" id="scoreboard"></div>
+      </div>
+      <div class="timer" id="timer" hidden><div class="timer-fill" id="timer-fill"></div></div>
+      <div class="journey" id="journey" hidden></div>
+
+      <ol class="chain" id="chain" aria-live="polite"></ol>
+
+      <div class="dock">
+        <div class="turn-line">
+          <div class="letter-badge" id="letter-badge">
+            <span class="letter-label">ابدأ بحرف</span>
+            <span class="letter" id="letter">؟</span>
+          </div>
+          <div class="turn-info">
+            <p class="turn-who" id="turn-who"></p>
+            <p class="turn-sub" id="turn-sub"></p>
+          </div>
+          <span class="clock" id="clock" hidden></span>
+        </div>
+
+        <div class="feedback" id="feedback" role="status" hidden></div>
+
+        <form id="verse-form" class="verse-form" autocomplete="off">
+          <label for="verse-input" class="sr-only">اكتب البيت كاملًا</label>
+          <textarea id="verse-input" rows="2" lang="ar" dir="rtl" spellcheck="false"
+            placeholder="اكتب البيت كاملًا: الصدر ثم العجز"></textarea>
+          <div class="form-actions">
+            <button type="submit" class="btn primary" id="btn-submit">أنشِد</button>
+            <button type="button" class="icon-btn" id="btn-mic" aria-label="أنشِد بصوتك" hidden>🎙</button>
+            <button type="button" class="btn ghost small" id="btn-hint">تلميح</button>
+            <button type="button" class="btn ghost small danger" id="btn-pass">أعجزتني</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- النهاية -->
+    <section id="screen-over" class="screen" aria-labelledby="over-title">
+      <div class="panel center">
+        <p class="over-kicker" id="over-kicker">انتهت المساجلة</p>
+        <h2 id="over-title" class="over-title"></h2>
+        <p class="over-sub" id="over-sub"></p>
+        <div class="over-stats" id="over-stats"></div>
+        <div class="over-actions">
+          <button class="btn primary" id="btn-again">العب مجددًا</button>
+          <button class="btn ghost" data-go="home">الرئيسية</button>
+        </div>
+        <details class="over-chain">
+          <summary>أبيات المساجلة</summary>
+          <ol class="chain static" id="over-chain"></ol>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="rules" class="rules">
+    <form method="dialog">
+      <h2>قواعد المساجلة</h2>
+      <ol>
+        <li>يذكر اللاعب بيتًا كاملًا (صدرًا وعجزًا) من الشعر العربي.</li>
+        <li>يجب أن يبدأ بيتك بالحرف الذي انتهى به البيت السابق، أي <b>حرف الرويّ</b>.</li>
+        <li>لا تُحتسب حروف الإطلاق والوصل في آخر البيت، فـ«جاهلا» تنتهي باللام، و«سراجُها» بالجيم.</li>
+        <li>الهمزة والألف حرف واحد، والتاء المربوطة تُعامل هاءً، والألف المقصورة ألفًا.</li>
+        <li>لا يُقبل إلا بيت موجود في قاعدة الأبيات، ولا يُكرَّر بيت في المساجلة نفسها. الأخطاء الإملائية اليسيرة مقبولة.</li>
+        <li>من انتهى وقته أو قال «أعجزتني» خسر قلبًا، وانتقل الحرف نفسه إلى من بعده.</li>
+        <li>النقاط: ١٠ لكل بيت، وزيادة للحروف النادرة وللسرعة.</li>
+      </ol>
+      <h3>اللعب الفردي</h3>
+      <p><b>تحدّي الحاسوب:</b> تبدأ أنت، ثم يردّ الحاسوب ببيت يبدأ برويّ بيتك، وعليك أن تجيبه من رويّ بيته. في المستوى الصعب يختار أبياتًا تنتهي بحروف نادرة.</p>
+      <p><b>رحلة الحروف:</b> الحروف بالترتيب الهجائي من الألف إلى الياء، بيت لكل حرف. التخطي يكلّفك قلبًا.</p>
+      <button class="btn primary">فهمت</button>
+    </form>
+  </dialog>
+
+  <footer class="site-footer">
+    الأبيات من مجموعة بيانات <a href="https://huggingface.co/datasets/arbml/ashaar" target="_blank" rel="noopener">«أشعار»</a>
+    المجموعة من الديوان وبوابة الشعراء وموسوعة الشعر العربي، ولكل بيت رابط إلى مصدره.
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
