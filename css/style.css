@@ -346,6 +346,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .site-footer { text-align: center; font-size: 0.8rem; color: var(--ink-soft); padding: 12px 16px; }
 body.playing .site-footer { display: none; }
+body.has-badge .dock { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+body.has-badge .site-footer { padding-bottom: 64px; }
 body.playing #screen-game.active { height: 100dvh; }
 
 @keyframes pulse { 50% { opacity: 0.55; } }

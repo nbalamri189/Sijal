@@ -623,6 +623,20 @@ if (Recognition) {
   });
 }
 
+// ---------- hosting badge ----------
+// Netlify pins a badge to the bottom corner; keep the game buttons clear of it.
+function watchBadge() {
+  const check = () => {
+    if (!document.getElementById("nl-badge-frame")) return false;
+    document.body.classList.add("has-badge");
+    return true;
+  };
+  if (check()) return;
+  const observer = new MutationObserver(() => check() && observer.disconnect());
+  observer.observe(document.body, { childList: true });
+}
+watchBadge();
+
 // ---------- boot ----------
 const indexReady = loadIndex();
 indexReady
