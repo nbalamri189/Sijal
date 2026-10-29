@@ -231,7 +231,7 @@ function newGame(mode = settings.mode, challenge = null) {
     journeyIdx: 0,
     hints: 0,
     hinted: new Set(),
-    time: mode === "daily" ? 60 : settings.time,
+    time: mode === "daily" ? 0 : settings.time,
     challenge,
     token: 0,
     busy: false,
@@ -832,7 +832,7 @@ if (incoming) {
     journey: `🏆 تحدّاك ${who}: جمع ${pointsText(incoming.s)} في رحلة الحروف. هل تتفوّق عليه؟`,
     daily: incoming.day === dailyNumber()
       ? `🏆 تحدّاك ${who} في تحدّي اليوم: ${gridEmoji(incoming.g)} بـ${pointsText(incoming.s)}. هل تغلبه؟`
-      : `🏆 دعاك ${who} إلى تحدّي اليوم. سبعة أحرف، دقيقة لكل حرف. هل تقبل؟`,
+      : `🏆 دعاك ${who} إلى تحدّي اليوم. سبعة أحرف، بلا وقت محدد. هل تقبل؟`,
   }[incoming.m];
   $("#challenge-text").textContent = text;
   $("#challenge-banner").hidden = false;
