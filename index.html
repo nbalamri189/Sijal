@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>مساجلة</title>
   <meta name="description" content="مساجلة شعرية: كل لاعب يذكر بيتًا يبدأ بالحرف الذي انتهى به بيت خصمه. أبيات حقيقية من دواوين الشعر العربي.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="مساجلة">
+  <meta property="og:title" content="مساجلة · ساجلني بالشعر إن استطعت">
+  <meta property="og:description" content="اذكر بيتًا يبدأ بالحرف الذي انتهى به بيت خصمك. أكثر من ٤٠٠ ألف بيت حقيقي من دواوين الشعر العربي.">
+  <meta property="og:image" content="https://sijal-l0hz.netlify.app/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://sijal-l0hz.netlify.app/">
+  <meta property="og:locale" content="ar_AR">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#f4ecdc" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#16130e" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23a5761f'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle' fill='%23fff8e8' font-family='serif'%3E%D8%B3%3C/text%3E%3C/svg%3E">
@@ -18,6 +28,10 @@
 
     <!-- الرئيسية -->
     <section id="screen-home" class="screen active" aria-labelledby="home-title">
+      <div class="challenge-banner" id="challenge-banner" hidden>
+        <p class="challenge-text" id="challenge-text"></p>
+        <button class="btn primary" id="btn-accept">اقبل التحدّي</button>
+      </div>
       <header class="hero">
         <p class="hero-kicker">لعبة الشعر العربي</p>
         <h1 id="home-title" class="logo">مساجلة</h1>
@@ -32,6 +46,11 @@
       </header>
 
       <div class="modes">
+        <button class="mode-card daily-card" data-mode="daily">
+          <span class="mode-icon" aria-hidden="true">☀</span>
+          <span class="mode-title" id="daily-title">تحدّي اليوم</span>
+          <span class="mode-desc" id="daily-desc">سبعة أحرف جديدة كل يوم، هي نفسها لكل اللاعبين. دقيقة لكل حرف، ثم شارك نتيجتك وقارنها بأصدقائك.</span>
+        </button>
         <button class="mode-card" data-mode="duel">
           <span class="mode-icon" aria-hidden="true">⚔</span>
           <span class="mode-title">مساجلة بين لاعبين</span>
@@ -51,6 +70,7 @@
 
       <div class="home-actions">
         <button class="btn ghost" id="btn-rules">قواعد اللعبة</button>
+        <button class="btn whatsapp" id="btn-invite">ادعُ أصدقاءك</button>
       </div>
       <p class="db-stats" id="db-stats">جارٍ تحميل قاعدة الأبيات…</p>
     </section>
@@ -156,6 +176,22 @@
         <h2 id="over-title" class="over-title"></h2>
         <p class="over-sub" id="over-sub"></p>
         <div class="over-stats" id="over-stats"></div>
+        <p class="challenge-result" id="challenge-result" hidden></p>
+        <div class="daily-grid" id="daily-grid" hidden></div>
+
+        <div class="share" id="share">
+          <p class="share-title" id="share-title">تحدَّ أصدقاءك بنتيجتك</p>
+          <label class="share-name" id="share-name-field">
+            <span>اسمك</span>
+            <input id="share-name" maxlength="20" placeholder="ليعرف أصدقاؤك من تحدّاهم">
+          </label>
+          <div class="share-actions">
+            <button class="btn whatsapp" id="share-wa">أرسل عبر واتساب</button>
+            <button class="btn ghost" id="share-image">صورة النتيجة</button>
+            <button class="btn ghost" id="share-copy">نسخ</button>
+          </div>
+        </div>
+
         <div class="over-actions">
           <button class="btn primary" id="btn-again">العب مجددًا</button>
           <button class="btn ghost" data-go="home">الرئيسية</button>
@@ -182,6 +218,7 @@
       </ol>
       <h3>اللعب الفردي</h3>
       <p><b>تحدّي الحاسوب:</b> تبدأ أنت، ثم يردّ الحاسوب ببيت يبدأ برويّ بيتك، وعليك أن تجيبه من رويّ بيته. في المستوى الصعب يختار أبياتًا تنتهي بحروف نادرة.</p>
+      <p><b>تحدّي اليوم:</b> سبعة أحرف يختارها التحدّي كل يوم، هي نفسها لجميع اللاعبين، ولك محاولة واحدة. أنجزه كل يوم لتطول سلسلة أيامك 🔥.</p>
       <p><b>رحلة الحروف:</b> الحروف بالترتيب الهجائي من الألف إلى الياء، بيت لكل حرف. التخطي يكلّفك قلبًا.</p>
       <button class="btn primary">فهمت</button>
     </form>
@@ -191,6 +228,8 @@
     الأبيات من مجموعة بيانات <a href="https://huggingface.co/datasets/arbml/ashaar" target="_blank" rel="noopener">«أشعار»</a>
     المجموعة من الديوان وبوابة الشعراء وموسوعة الشعر العربي، ولكل بيت رابط إلى مصدره.
   </footer>
+
+  <div class="toast" id="toast" role="status" hidden></div>
 
   <script type="module" src="js/app.js"></script>
 </body>
