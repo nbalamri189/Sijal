@@ -711,7 +711,7 @@ function showChallengeResult(score) {
   box.className = `challenge-result ${diff > 0 ? "won" : diff < 0 ? "lost" : ""}`;
   box.textContent = diff > 0
     ? `🎉 تفوّقت على ${rival} بفارق ${pointsText(diff)}!`
-    : diff < 0 ? `ينقصك ${pointsText(-diff)} لتتفوّق على ${rival} (${pointsText(c.s)}). حاول مجددًا!`
+    : diff < 0 ? `تحتاج إلى ${pointsText(-diff)} أخرى لتتفوّق على ${rival} (${pointsText(c.s)}). حاول مجددًا!`
     : `تعادلت مع ${rival}: ${pointsText(c.s)} لكلٍّ منكما.`;
 }
 
