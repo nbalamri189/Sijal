@@ -7,6 +7,9 @@ the game comes from this dataset, with a link back to the poem's source page.
 Usage:
     python3 tools/build_data.py path/to/train-00000.parquet path/to/train-00001.parquet
 
+Poets listed in tools/poets.py come from every source. All other poets on
+aldiwan.net are added too, as tier 3, with the era the dataset gives them.
+
 Writes data/index.json and data/shards/*.json. Verses are sharded by the first
 two letters of their normalized text, so the browser only loads the shard that
 can contain the verse a player typed.
@@ -120,14 +123,25 @@ def main(paths):
         for n in names:
             alias[normalize(n)] = idx
 
-    cols = ["poem title", "poem meter", "poem verses", "poem url", "poet name"]
+    cols = ["poem title", "poem meter", "poem verses", "poem url", "poet name", "poet era"]
     df = pd.concat([pd.read_parquet(p, columns=cols) for p in paths], ignore_index=True)
-    df["poet_idx"] = df["poet name"].map(lambda n: alias.get(normalize(n)) if isinstance(n, str) else None)
-    df = df[df["poet_idx"].notna()].copy()
     meter = df["poem meter"].fillna("")
-    df = df[~meter.map(lambda m: any(x in m for x in EXCLUDED_METERS))]
+    df = df[~meter.map(lambda m: any(x in m for x in EXCLUDED_METERS))].copy()
     df["rank"] = df["poem url"].map(source_rank)
-    df = df.sort_values(["rank"], kind="stable")
+    df["poet_idx"] = df["poet name"].map(lambda n: alias.get(normalize(n)) if isinstance(n, str) else None)
+    df["extra"] = df["poet_idx"].isna()
+    df = df[df["poet_idx"].notna() | ((df["rank"] == 0) & df["poet name"].map(lambda n: isinstance(n, str) and len(normalize(n)) > 1))]
+    # Listed poets first, so their verses win over duplicates credited to others.
+    df = df.sort_values(["extra", "rank"], kind="stable")
+
+    poets = [[n, era, tier] for n, era, tier, _ in POETS]
+    for row in df[df["extra"]].itertuples(index=False):
+        name = normalize(row[4])
+        if name not in alias:
+            era = re.sub(r"^العصر\s+(ال)?", "", row[5]).strip() if isinstance(row[5], str) else ""
+            alias[name] = len(poets)
+            poets.append([re.sub(r"\s+", " ", row[4]).strip(), era, 3])
+    df["poet_idx"] = df["poet name"].map(lambda n: alias[normalize(n)])
 
     seen = set()
     shards = collections.defaultdict(lambda: {"poems": [], "verses": [], "poem_ids": {}})
@@ -147,7 +161,7 @@ def main(paths):
             stats["bad_len"] += 1
             continue
         ends = [end_letters(a) for _, a in pairs]
-        if not meter and not looks_classical(pairs, ends, POETS[int(row.poet_idx)][1]):
+        if not meter and not looks_classical(pairs, ends, poets[int(row.poet_idx)][1]):
             stats["not_classical"] += 1
             continue
         rawis = poem_rawi(ends)
@@ -165,6 +179,12 @@ def main(paths):
             poem = (poem_counter, poet_idx, clean_line(row[0] if isinstance(row[0], str) else ""), row[3] if isinstance(row[3], str) else "", meter_name)
             verses.append((key(s), [s, a, r, d, 1 if i == 0 else 0], poem))
             stats["verses"] += 1
+
+    # Drop added poets whose poems were all filtered out.
+    kept = set(range(len(POETS))) | {poem[1] for _, _, poem in verses}
+    remap = {old: new for new, old in enumerate(sorted(kept))}
+    poets = [p for i, p in enumerate(poets) if i in kept]
+    verses = [(k, v, (poem[0], remap[poem[1]]) + poem[2:]) for k, v, poem in verses]
 
     # Shard by the first two letters, using longer prefixes for crowded ones.
     counts = collections.Counter(k[:n] for k, _, _ in verses for n in range(2, 6))
@@ -190,7 +210,7 @@ def main(paths):
         with open(os.path.join(OUT, "shards", name + ".json"), "w", encoding="utf-8") as fh:
             json.dump({"poems": shard["poems"], "verses": shard["verses"]}, fh, ensure_ascii=False, separators=(",", ":"))
         lead = start_letter(shard["verses"][0][0])
-        famous = sum(1 for v in shard["verses"] if v[5] and POETS[shard["poems"][v[2]][0]][2] == 1)
+        famous = sum(1 for v in shard["verses"] if v[5] and poets[shard["poems"][v[2]][0]][2] == 1)
         letters[lead]["count"] += len(shard["verses"])
         letters[lead]["shards"].append([name, len(shard["verses"]), famous])
 
@@ -198,7 +218,7 @@ def main(paths):
     index = {
         "source": "https://huggingface.co/datasets/arbml/ashaar",
         "total": stats["verses"],
-        "poets": [[n, era, tier] for n, era, tier, _ in POETS],
+        "poets": poets,
         "letters": letters,
         "rawi": dict(rawi_counts),
     }

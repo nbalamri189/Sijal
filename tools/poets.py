@@ -2,6 +2,7 @@
 
 Each entry: (display name, era, tier, [names as they appear in the source dataset]).
 Tier 1 poets are the best known; the computer opponent prefers their verses.
+build_data.py adds every other poet on aldiwan.net after these, as tier 3.
 """
 
 POETS = [

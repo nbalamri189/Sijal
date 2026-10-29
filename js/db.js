@@ -1,5 +1,5 @@
 // Verse database: lazy-loaded shards keyed by the first letters of a verse.
-import { key, startLetter, similarity } from "./arabic.js?v=7";
+import { key, startLetter, similarity } from "./arabic.js?v=8";
 
 let index = null;
 const shardNames = new Set();
@@ -7,7 +7,7 @@ const shardCache = new Map();
 
 export async function loadIndex() {
   if (index) return index;
-  const res = await fetch("data/index.json");
+  const res = await fetch("data/index.json?v=8");
   if (!res.ok) throw new Error("تعذّر تحميل قاعدة الأبيات");
   index = await res.json();
   for (const info of Object.values(index.letters)) {
