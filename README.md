@@ -39,7 +39,8 @@ python3 -m http.server 8000
 # ثم افتح http://localhost:8000
 ```
 
-للنشر على GitHub Pages: Settings ← Pages ← Deploy from a branch ← `main` / root.
+اللعبة منشورة على GitHub Pages: https://nbalamri189.github.io/Sijal/
+(Settings ← Pages ← Deploy from a branch ← `main` / root). وسوم المعاينة في `index.html` تشير إلى هذا الرابط.
 
 ## إعادة بناء قاعدة الأبيات
 
