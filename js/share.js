@@ -1,5 +1,5 @@
 // Sharing: challenge links, the daily challenge, WhatsApp texts and the result image.
-import { ALPHABET, arNum } from "./arabic.js?v=8";
+import { ALPHABET, arNum } from "./arabic.js?v=9";
 
 export const SITE_URL = location.origin + location.pathname.replace(/index\.html$/, "");
 
@@ -30,19 +30,20 @@ export function readChallenge() {
   if (!raw) return null;
   try {
     const c = JSON.parse(fromBase64Url(raw));
-    if (!["ai", "journey", "daily"].includes(c.m)) return null;
+    if (!["ai", "journey", "daily", "complete"].includes(c.m)) return null;
     const out = {
       m: c.m,
       s: Math.max(0, Math.min(99999, Math.floor(Number(c.s) || 0))),
       n: typeof c.n === "string" ? c.n.trim().slice(0, 20) : "",
     };
-    if (c.m === "ai") out.d = ["easy", "medium", "hard"].includes(c.d) ? c.d : "medium";
+    if (c.m === "ai" || c.m === "complete") out.d = ["easy", "medium", "hard"].includes(c.d) ? c.d : "medium";
     if (c.m !== "daily") out.l = [1, 3, 5].includes(c.l) ? c.l : 3;
     if (c.m === "daily") {
       out.day = Math.floor(Number(c.day) || 0);
       out.g = typeof c.g === "string" ? c.g.replace(/[^01h]/g, "").slice(0, DAILY_SIZE) : "";
     }
     if (c.m === "journey") out.k = Math.max(0, Math.min(ALPHABET.length, Math.floor(Number(c.k) || 0)));
+    if (c.m === "complete") out.k = Math.max(0, Math.min(9999, Math.floor(Number(c.k) || 0)));
     return out;
   } catch {
     return null;

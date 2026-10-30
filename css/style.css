@@ -118,7 +118,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .hero-verse figcaption a { color: inherit; }
 .hero-sub { max-width: 34em; margin: 12px auto 0; color: var(--ink-soft); }
 
-.modes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: 8px; }
+.modes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); margin-top: 8px; }
 .mode-card {
   text-align: right;
   background: var(--card);
@@ -244,6 +244,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* colour only: changing weight or padding would break Arabic letter joining */
 .verse-text .start, .verse-text .rawi { color: var(--accent-strong); }
 .verse-text .rawi { text-decoration: underline 2px; text-underline-offset: 6px; }
+.verse.puzzle { border-style: dashed; border-inline-start-style: solid; }
+.verse-text .blank {
+  display: block; min-height: 1.4em; margin-top: 0.35em;
+  border-bottom: 2px dashed var(--accent);
+}
 .verse-meta { font-size: 0.82rem; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 0 10px; }
 .verse-meta a { color: inherit; }
 

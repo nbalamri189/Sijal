@@ -1,5 +1,5 @@
 // Verse database: lazy-loaded shards keyed by the first letters of a verse.
-import { key, startLetter, similarity } from "./arabic.js?v=8";
+import { key, startLetter, similarity } from "./arabic.js?v=9";
 
 let index = null;
 const shardNames = new Set();
@@ -7,7 +7,7 @@ const shardCache = new Map();
 
 export async function loadIndex() {
   if (index) return index;
-  const res = await fetch("data/index.json?v=8");
+  const res = await fetch("data/index.json?v=9");
   if (!res.ok) throw new Error("تعذّر تحميل قاعدة الأبيات");
   index = await res.json();
   for (const info of Object.values(index.letters)) {
@@ -114,6 +114,24 @@ function weightedPick(items, weight) {
     if (r <= 0) return items[i];
   }
   return items[items.length - 1];
+}
+
+// Chooses any verse to be completed in «أكمل البيت». level sets how well
+// known it is: easy = an opening verse by a famous poet, medium = any verse by
+// a famous poet, hard = any verse in the database.
+export async function randomVerse({ used = new Set(), level = "medium" } = {}) {
+  const shards = Object.values(index.letters).flatMap((info) => info.shards);
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const [name] = weightedPick(shards, ([, count, fam]) => (level === "hard" ? count : fam));
+    const verses = (await loadShard(name)).filter((v) => !used.has(v.key));
+    const pool = {
+      easy: verses.filter((v) => v.matla && v.poem.tier === 1),
+      medium: verses.filter((v) => v.poem.tier === 1),
+      hard: verses,
+    }[level];
+    if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+  }
+  return null;
 }
 
 // Chooses a real verse starting with `letter`, for the computer or a hint.

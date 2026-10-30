@@ -1,11 +1,11 @@
 import {
-  ALPHABET, LETTER_NAMES, arNum, firstLetterIndex, letterIndexFromEnd, letterSpan,
-} from "./arabic.js?v=8";
-import { letterCount, loadIndex, matchVerse, pickVerse } from "./db.js?v=8";
+  ALPHABET, LETTER_NAMES, arNum, firstLetterIndex, key, letterIndexFromEnd, letterSpan, similarity,
+} from "./arabic.js?v=9";
+import { letterCount, loadIndex, matchVerse, pickVerse, randomVerse } from "./db.js?v=9";
 import {
   DAILY_SIZE, SITE_URL, arCount, challengeURL, clearChallengeFromURL, copyText, dailyLetters, dailyNumber,
   gridEmoji, msUntilTomorrow, openWhatsApp, readChallenge, renderResultImage, shareImage, verseShareText,
-} from "./share.js?v=8";
+} from "./share.js?v=9";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -30,11 +30,21 @@ const MODES = {
     title: "رحلة الحروف",
     desc: "الحروف بالترتيب الهجائي من الألف إلى الياء: اذكر بيتًا يبدأ بكل حرف، بلا وقت محدد. التخطي يكلّفك قلبًا وينقلك إلى الحرف التالي.",
   },
+  complete: {
+    title: "أكمل البيت",
+    desc: "يظهر لك صدر بيت فتكتب عجزه، أو عجزه فتكتب صدره، بلا وقت محدد. من عجز خسر قلبًا وعرف البيت، وتستمر اللعبة حتى تنفد قلوبك.",
+  },
 };
 const DIFFICULTY_HINTS = {
   easy: "يختار الحاسوب أبياتًا مشهورة تنتهي بحروف شائعة.",
   medium: "يختار الحاسوب أبياتًا مشهورة بلا تحيّز في حروفها الأخيرة.",
   hard: "يتعمّد الحاسوب أن يُنهي أبياته بحروف نادرة كالظاء والثاء والضاد.",
+};
+const LEVELS = { easy: "المطالع المشهورة", medium: "كبار الشعراء", hard: "كل الشعراء" };
+const LEVEL_HINTS = {
+  easy: "مطالع القصائد لكبار الشعراء، كـ«قفا نبك» و«لكل شيء إذا ما تمّ نقصان».",
+  medium: "أي بيت من شعر كبار الشعراء، من مطالع قصائدهم ومن أثنائها.",
+  hard: "أي بيت في قاعدة الأبيات كلها، لكبار الشعراء وسواهم.",
 };
 
 // ---------- storage (best-effort; the game works without it) ----------
@@ -49,7 +59,7 @@ function store(name, value) {
 }
 
 const settings = Object.assign(
-  { mode: "duel", difficulty: "medium", timer: "off", time: 60, lives: 3, start: "random", players: ["اللاعب الأول", "اللاعب الثاني"] },
+  { mode: "duel", difficulty: "medium", level: "medium", timer: "off", time: 60, lives: 3, start: "random", players: ["اللاعب الأول", "اللاعب الثاني"] },
   store("settings") || {},
 );
 
@@ -142,9 +152,10 @@ function openSetup(mode) {
   $("#setup-desc").textContent = MODES[mode].desc;
   $("#field-players").hidden = mode !== "duel";
   $("#field-difficulty").hidden = mode !== "ai";
-  $("#field-start").hidden = mode === "journey";
+  $("#field-level").hidden = mode !== "complete";
+  $("#field-start").hidden = mode === "journey" || mode === "complete";
   $("#field-time").hidden = mode !== "duel";
-  $("#btn-start").textContent = mode === "journey" ? "ابدأ الرحلة" : "ابدأ المساجلة";
+  $("#btn-start").textContent = { journey: "ابدأ الرحلة", complete: "ابدأ" }[mode] || "ابدأ المساجلة";
   syncSegmented();
   renderPlayers();
   show("setup");
@@ -156,6 +167,7 @@ function syncSegmented() {
     for (const b of group.querySelectorAll("button")) b.classList.toggle("on", b.dataset.value === value);
   }
   $("#difficulty-hint").textContent = DIFFICULTY_HINTS[settings.difficulty];
+  $("#level-hint").textContent = LEVEL_HINTS[settings.level];
   $("#time-options").hidden = settings.timer !== "on";
 }
 
@@ -241,16 +253,20 @@ function newGame(mode = settings.mode, challenge = null) {
     // Only the two-player duel has a timer, and only when the players ask for one.
     time: mode === "duel" && settings.timer === "on" ? settings.time : 0,
     challenge,
+    puzzle: null, // «أكمل البيت»: {verse, missing: "sadr"|"ajuz", reveal, el}
     token: 0,
     busy: false,
     deadline: 0,
     startedAt: Date.now(),
   };
   if (isSequence(mode)) game.letter = game.letters[0];
-  else if (settings.start === "random") game.letter = randomStartLetter();
+  else if (settings.start === "random" && mode !== "complete") game.letter = randomStartLetter();
 
   $("#chain").innerHTML = "";
   $("#btn-hint").hidden = mode === "duel";
+  const prompt = mode === "complete" ? "اكتب الشطر الناقص" : "اكتب البيت كاملًا: الصدر ثم العجز";
+  input.placeholder = prompt;
+  $("#verse-label").textContent = prompt;
   $("#journey").hidden = !isSequence(mode);
   show("game");
   renderEmptyChain();
@@ -258,6 +274,11 @@ function newGame(mode = settings.mode, challenge = null) {
 }
 
 function renderEmptyChain() {
+  if (game.mode === "complete") {
+    $("#chain").innerHTML = `<li class="chain-empty chain-intro"><span class="big">أكمل البيت</span>
+      اكتب الشطر الناقص، أو البيت كله إن شئت. الأخطاء الإملائية اليسيرة مقبولة.</li>`;
+    return;
+  }
   const l = game.letter;
   const lead = game.mode === "journey"
     ? "رحلتك تبدأ من الألف"
@@ -288,7 +309,12 @@ function renderTurn() {
   const p = current();
   const badge = $("#letter-badge");
   const letterEl = $("#letter");
-  if (game.letter) {
+  const puzzle = game.puzzle;
+  if (game.mode === "complete") {
+    letterEl.textContent = puzzle ? (puzzle.missing === "sadr" ? "صدر" : "عجز") : "…";
+    letterEl.classList.add("free");
+    $(".letter-label").textContent = "أكمل";
+  } else if (game.letter) {
     letterEl.textContent = game.letter;
     letterEl.classList.remove("free");
     $(".letter-label").textContent = "ابدأ بحرف";
@@ -303,11 +329,15 @@ function renderTurn() {
 
   const who = game.mode === "duel" ? `دور ${p.name}` : p.ai ? "دور الحاسوب" : "دورك";
   $("#turn-who").textContent = who;
+  const thinking = `<span class="thinking"><i></i><i></i><i></i></span>`;
   $("#turn-sub").innerHTML = p.ai
-    ? `يتأمّل بيتًا… <span class="thinking"><i></i><i></i><i></i></span>`
+    ? `يتأمّل بيتًا… ${thinking}`
+    : game.mode === "complete"
+      ? puzzle ? `اكتب ${puzzle.missing === "sadr" ? "صدر" : "عجز"} البيت` : `يختار بيتًا… ${thinking}`
     : game.letter ? `بيت يبدأ بحرف ${LETTER_NAMES[game.letter]}` : "ابدأ بأي بيت شئت";
-  $(".dock").classList.toggle("waiting", p.ai);
-  $("#btn-hint").disabled = !game.letter;
+  const waiting = p.ai || (game.mode === "complete" && !puzzle);
+  $(".dock").classList.toggle("waiting", waiting);
+  $("#btn-hint").disabled = game.mode === "complete" ? !puzzle : !game.letter;
   renderScoreboard();
 }
 
@@ -320,6 +350,10 @@ function startTurn() {
     stopTimer(true);
     game.deadline = 0;
     aiTurn(game.token);
+    return;
+  }
+  if (game.mode === "complete" && !game.puzzle) {
+    loadPuzzle(game.token);
     return;
   }
   startTimer();
@@ -413,6 +447,7 @@ async function submit() {
   if (!game || game.busy || current().ai) return;
   const text = input.value.trim();
   if (!text) return;
+  if (game.mode === "complete") return submitCompletion(text);
   const token = game.token;
   game.busy = true;
   $("#btn-submit").disabled = true;
@@ -490,6 +525,7 @@ function fail(reason) {
   const p = current();
   const letter = game.letter;
   p.lives--;
+  if (game.mode === "complete") return failPuzzle();
   const solo = game.mode !== "duel";
   const why = reason === "timeout" ? "انتهى الوقت" : solo ? "أعجزك الحرف" : "أعجزه الحرف";
   const lost = solo ? "فخسرت قلبًا" : `فخسر ${p.name} قلبًا`;
@@ -559,13 +595,93 @@ async function aiTurn(token) {
   accept(verse);
 }
 
+// ---------- «أكمل البيت» ----------
+async function loadPuzzle(token) {
+  game.busy = true;
+  const verse = await randomVerse({ used: game.used, level: settings.level }).catch(() => null);
+  if (!game || token !== game.token) return;
+  game.busy = false;
+  if (!verse) {
+    feedback("error", "تعذّر تحميل الأبيات. تحقّق من الاتصال وحاول مجددًا.");
+    $("#feedback").insertAdjacentHTML("beforeend", ` <button class="btn small ghost" data-act="retry">أعد المحاولة</button>`);
+    $("#feedback").querySelector('[data-act="retry"]').addEventListener("click", startTurn);
+    return;
+  }
+  game.used.add(verse.key);
+  const missing = Math.random() < 0.5 ? "sadr" : "ajuz";
+  const li = document.createElement("li");
+  game.puzzle = { verse, missing, reveal: 0, el: li };
+  li.innerHTML = puzzleHTML(game.puzzle);
+  if (game.chain.length) appendChain(li);
+  else $("#chain").append(li);
+  renderTurn();
+  if (!isTouch) input.focus();
+}
+
+// The verse with its missing half as a blank. The poem title is left out
+// because it is often the opening verse itself.
+function puzzleHTML({ verse, missing }) {
+  const blank = `<span class="blank" aria-label="الشطر الناقص"></span>`;
+  const sadr = missing === "sadr" ? blank : escapeHTML(verse.sadr);
+  const ajuz = missing === "ajuz" ? blank : escapeHTML(verse.ajuz);
+  const meta = [verse.poem.poet, verse.poem.meter].filter(Boolean).map((m) => `<span>${escapeHTML(m)}</span>`).join("");
+  return `<article class="verse puzzle">
+      <div class="verse-who">أكمل ${missing === "sadr" ? "صدر" : "عجز"} البيت</div>
+      <p class="verse-text"><span class="sadr">${sadr}</span><span class="ajuz">${ajuz}</span></p>
+      <div class="verse-meta">${meta}</div>
+    </article>`;
+}
+
+// Accepts the missing half alone or the whole verse, with small spelling slips.
+function completionScore(text, { verse, missing }) {
+  const k = key(text);
+  if (k.length < 4) return 0;
+  return Math.max(similarity(k, key(verse[missing])), similarity(k, verse.key));
+}
+
+function submitCompletion(text) {
+  const puzzle = game.puzzle;
+  if (!puzzle) return;
+  const score = completionScore(text, puzzle);
+  if (score >= 0.88) return solvePuzzle();
+  feedback("error", score >= 0.8
+    ? "قريب! راجع نصّه، ففيه أكثر من خطأ يسير."
+    : `ليس هذا ${puzzle.missing === "sadr" ? "صدر" : "عجز"} البيت. حاول مجددًا، أو اطلب تلميحًا.`);
+}
+
+function solvePuzzle() {
+  const { verse, missing, el } = game.puzzle;
+  const player = current();
+  const pts = missing === "sadr" ? 15 : 10;
+  player.score += pts;
+  player.verses++;
+  game.chain.push({ verse, player, pts });
+  el.innerHTML = verseHTML(verse, { who: player.name, color: player.color, pts });
+  game.puzzle = null;
+  startTurn();
+}
+
+function failPuzzle() {
+  const p = current();
+  const { verse, el } = game.puzzle;
+  game.chain.push({ verse, player: { name: "فاتك هذا البيت", color: "var(--danger)" }, pts: 0, missed: true });
+  el.innerHTML = verseHTML(verse, { who: "فاتك هذا البيت", color: "var(--danger)" });
+  game.puzzle = null;
+  addNote(p.lives > 0 ? "أعجزك البيت، فخسرت قلبًا." : "أعجزك البيت، ونفدت قلوبك.");
+  if (p.lives <= 0) return endGame();
+  startTurn();
+}
+
 $("#btn-pass").addEventListener("click", () => {
   if (!game || current().ai || game.busy) return;
+  if (game.mode === "complete" && !game.puzzle) return;
   fail("pass");
 });
 
 $("#btn-hint").addEventListener("click", async () => {
-  if (!game || current().ai || !game.letter) return;
+  if (!game || current().ai) return;
+  if (game.mode === "complete") return completionHint();
+  if (!game.letter) return;
   const p = current();
   const token = game.token;
   const verse = await pickVerse(game.letter, { used: game.used, difficulty: "easy" }).catch(() => null);
@@ -577,6 +693,23 @@ $("#btn-hint").addEventListener("click", async () => {
   feedback("info", `تلميح (−${arNum(HINT_COST)}): <span class="suggest">${escapeHTML(firstWords(verse.sadr, 3))}…</span>
     الشاعر: ${escapeHTML(verse.poem.poet)}`);
 });
+
+// Each hint shows one more word of the missing half, up to all but the last.
+function completionHint() {
+  const puzzle = game.puzzle;
+  if (!puzzle) return;
+  const words = puzzle.verse[puzzle.missing].split(/\s+/);
+  if (puzzle.reveal >= words.length - 1) {
+    feedback("info", `لم يبقَ إلا كلمة واحدة: <span class="suggest">${escapeHTML(words.slice(0, -1).join(" "))}…</span>`);
+    return;
+  }
+  const p = current();
+  p.score = Math.max(0, p.score - HINT_COST);
+  game.hints++;
+  puzzle.reveal++;
+  renderScoreboard();
+  feedback("info", `تلميح (−${arNum(HINT_COST)}): <span class="suggest">${escapeHTML(firstWords(puzzle.verse[puzzle.missing], puzzle.reveal))}…</span>`);
+}
 
 $("#btn-quit").addEventListener("click", () => {
   if (!confirm("أتريد إنهاء المساجلة؟")) return;
@@ -593,7 +726,7 @@ function stateCode(state) {
 }
 
 function bestVerse() {
-  const mine = game.chain.filter((c) => !c.player.ai);
+  const mine = game.chain.filter((c) => !c.player.ai && !c.missed);
   const pool = mine.length ? mine : game.chain;
   return pool.reduce((best, c) => (!best || c.pts > best.pts ? c : best), null)?.verse || null;
 }
@@ -646,7 +779,9 @@ function endGame() {
     finishOver();
     return;
   } else {
-    const bestKey = game.mode === "ai" ? `best.ai.${settings.difficulty}` : "best.journey";
+    const bestKey = {
+      ai: `best.ai.${settings.difficulty}`, complete: `best.complete.${settings.level}`,
+    }[game.mode] || "best.journey";
     const best = store(bestKey) || 0;
     const record = human.score > best;
     if (record) store(bestKey, human.score);
@@ -661,6 +796,14 @@ function endGame() {
       shareLine = `ساجلتُ الحاسوب في المستوى ${level} وجمعت ${pointsText(human.score)} بـ${arCount(human.verses, "بيت واحد", "بيتين", "أبيات", "بيتًا")} 🔥`;
       cardTitle = `${pointsText(human.score)}`;
       cardSub = `تحدّي الحاسوب · المستوى ${level}`;
+    } else if (game.mode === "complete") {
+      const verses = arCount(human.verses, "بيتًا واحدًا", "بيتين", "أبيات", "بيتًا");
+      kicker.textContent = "انتهت اللعبة";
+      title.textContent = `أكملت ${verses}`;
+      sub.textContent = record && best ? "رقم قياسي جديد!" : `جمعت ${pointsText(human.score)}.`;
+      shareLine = `أكملت ${verses} في «أكمل البيت» (${LEVELS[settings.level]})، وجمعت ${pointsText(human.score)} 📜`;
+      cardTitle = `${pointsText(human.score)}`;
+      cardSub = `أكمل البيت · ${LEVELS[settings.level]} · ${verses}`;
     } else {
       const done = game.journey.filter((s) => s !== "skipped").length;
       kicker.textContent = game.journeyIdx >= ALPHABET.length ? "أتممت الرحلة" : "انتهت الرحلة";
@@ -675,6 +818,7 @@ function endGame() {
     const challenge = (name) => ({
       m: game.mode, s: human.score, n: name, l: settings.lives,
       ...(game.mode === "ai" ? { d: settings.difficulty } : { k: human.verses }),
+      ...(game.mode === "complete" ? { d: settings.level } : {}),
     });
     prepareShare({
       title: "تحدَّ أصدقاءك بنتيجتك",
@@ -838,6 +982,7 @@ if (incoming) {
   const text = {
     ai: `🏆 تحدّاك ${who}: جمع ${pointsText(incoming.s)} في تحدّي الحاسوب (المستوى ${level}). هل تتفوّق عليه؟`,
     journey: `🏆 تحدّاك ${who}: جمع ${pointsText(incoming.s)} في رحلة الحروف. هل تتفوّق عليه؟`,
+    complete: `🏆 تحدّاك ${who}: أكمل ${arCount(incoming.k, "بيتًا واحدًا", "بيتين", "أبيات", "بيتًا")} وجمع ${pointsText(incoming.s)} في «أكمل البيت» (${LEVELS[incoming.d]}). هل تتفوّق عليه؟`,
     daily: incoming.day === dailyNumber()
       ? `🏆 تحدّاك ${who} في تحدّي اليوم: ${gridEmoji(incoming.g)} بـ${pointsText(incoming.s)}. هل تغلبه؟`
       : `🏆 دعاك ${who} إلى تحدّي اليوم. سبعة أحرف، بلا وقت محدد. هل تقبل؟`,
@@ -851,7 +996,7 @@ if (incoming) {
     if (incoming.m === "daily") return openDaily(challenge);
     settings.mode = incoming.m;
     settings.lives = incoming.l;
-    if (incoming.d) settings.difficulty = incoming.d;
+    if (incoming.d) settings[incoming.m === "complete" ? "level" : "difficulty"] = incoming.d;
     await indexReady;
     newGame(incoming.m, challenge);
   });
@@ -896,7 +1041,7 @@ if (Recognition) {
 // Phones often restore an old tab from memory instead of reloading it, which
 // keeps an outdated copy of the game running. Ask the server (bypassing the
 // cache) which version is current, and move to it whenever no game is running.
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 let newerVersion = 0;
 
 async function checkForUpdate() {

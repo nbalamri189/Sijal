@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
   <main id="app">
@@ -66,6 +66,11 @@
           <span class="mode-title">رحلة الحروف</span>
           <span class="mode-desc">لعب فردي: بيت لكل حرف من الألف إلى الياء بالترتيب الهجائي. كم حرفًا تقطع قبل أن تنفد قلوبك؟</span>
         </button>
+        <button class="mode-card" data-mode="complete">
+          <span class="mode-icon" aria-hidden="true">…</span>
+          <span class="mode-title">أكمل البيت</span>
+          <span class="mode-desc">لعب فردي: يظهر لك صدر بيت أو عجزه، فاكتب الشطر الناقص. كم بيتًا تحفظ؟</span>
+        </button>
       </div>
 
       <div class="home-actions">
@@ -96,6 +101,16 @@
             <button data-value="hard">صعب</button>
           </div>
           <p class="hint-text" id="difficulty-hint"></p>
+        </div>
+
+        <div class="field" id="field-level">
+          <span class="label">الأبيات</span>
+          <div class="segmented" data-setting="level">
+            <button data-value="easy">مطالع مشهورة</button>
+            <button data-value="medium" class="on">كبار الشعراء</button>
+            <button data-value="hard">كل الشعراء</button>
+          </div>
+          <p class="hint-text" id="level-hint"></p>
         </div>
 
         <div class="field" id="field-time">
@@ -165,7 +180,7 @@
         <div class="feedback" id="feedback" role="status" hidden></div>
 
         <form id="verse-form" class="verse-form" autocomplete="off">
-          <label for="verse-input" class="sr-only">اكتب البيت كاملًا</label>
+          <label for="verse-input" class="sr-only" id="verse-label">اكتب البيت كاملًا</label>
           <textarea id="verse-input" rows="2" lang="ar" dir="rtl" spellcheck="false"
             placeholder="اكتب البيت كاملًا: الصدر ثم العجز"></textarea>
           <div class="form-actions">
@@ -229,6 +244,7 @@
       <p><b>تحدّي الحاسوب:</b> تبدأ أنت، ثم يردّ الحاسوب ببيت يبدأ برويّ بيتك، وعليك أن تجيبه من رويّ بيته. في المستوى الصعب يختار أبياتًا تنتهي بحروف نادرة.</p>
       <p><b>تحدّي اليوم:</b> سبعة أحرف يختارها التحدّي كل يوم، هي نفسها لجميع اللاعبين، بلا وقت محدد، ولك محاولة واحدة. أنجزه كل يوم لتطول سلسلة أيامك 🔥.</p>
       <p><b>رحلة الحروف:</b> الحروف بالترتيب الهجائي من الألف إلى الياء، بيت لكل حرف. التخطي يكلّفك قلبًا.</p>
+      <p><b>أكمل البيت:</b> يظهر لك صدر بيت فتكتب عجزه، أو عجزه فتكتب صدره، ولك أن تكتب البيت كله. البيت بعشر نقاط، وكتابة الصدر بخمس عشرة. كل تلميح يكشف كلمة من الشطر الناقص بخمس نقاط، ومن عجز خسر قلبًا وعرف البيت.</p>
       <button class="btn primary">فهمت</button>
     </form>
   </dialog>
@@ -240,6 +256,6 @@
 
   <div class="toast" id="toast" role="status" hidden></div>
 
-  <script type="module" src="js/app.js?v=8"></script>
+  <script type="module" src="js/app.js?v=9"></script>
 </body>
 </html>
