@@ -1,5 +1,5 @@
 // Sharing: challenge links, the daily challenge, WhatsApp texts and the result image.
-import { ALPHABET, arNum } from "./arabic.js?v=12";
+import { ALPHABET, arNum } from "./arabic.js?v=13";
 
 export const SITE_URL = location.origin + location.pathname.replace(/index\.html$/, "");
 
