@@ -9,8 +9,11 @@ Usage:
 
 Poets listed in tools/poets.py come from every source. All other poets on
 aldiwan.net are added too, as tier 3, with the era the dataset gives them.
+Poems typed or pasted into poems/*.txt are added as well (see poems/README.md);
+they win over the dataset's copy of the same verse.
 
-Writes data/index.json and data/shards/*.json. Verses are sharded by the first
+Writes data/index.json and data/shards/*.json, and lists every poem and poet
+in the database in catalog/poems.tsv and catalog/poets.tsv. Verses are sharded by the first
 two letters of their normalized text, so the browser only loads the shard that
 can contain the verse a player typed.
 """
@@ -26,7 +29,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 from arabic import key, normalize, strip_diacritics  # noqa: E402
 from poets import POETS  # noqa: E402
 
-OUT = os.path.join(os.path.dirname(__file__), "..", "data")
+ROOT = os.path.join(os.path.dirname(__file__), "..")
+OUT = os.path.join(ROOT, "data")
+MANUAL = os.path.join(ROOT, "poems")
+CATALOG = os.path.join(ROOT, "catalog")
+HEADERS = {"الشاعر": "poet name", "القصيدة": "poem title", "البحر": "poem meter", "المصدر": "poem url", "العصر": "poet era"}
 
 EXCLUDED_METERS = ("تفعيل", "نثر", "موشح", "عامي", "شعبي", "نبطي", "شعر حر", "الحر")
 # Letters that can be وصل/خروج after the روي, so the روي may sit before them.
@@ -117,6 +124,82 @@ def clean_line(line):
     return re.sub(r"\s+", " ", t).strip()
 
 
+def well_formed(pairs):
+    return all(6 <= len(normalize(s)) <= 90 and 6 <= len(normalize(a)) <= 90 for s, a in pairs)
+
+
+def repair(lines):
+    """Pairs for a poem the dataset stored with a stray line (".", "*", a
+    verse number) that shifts every sadr and ajuz after it.
+
+    Accepted only when the repaired poem rhymes: a pairing that is still off
+    puts sadrs in the ajuz column, and those rarely share one روي.
+    """
+    lines = [re.sub(r"^[\d٠-٩]+\s*[-.)]\s*", "", x) for x in lines if normalize(x)]
+    if len(lines) < 6 or len(lines) % 2:
+        return None
+    pairs = [(lines[i], lines[i + 1]) for i in range(0, len(lines), 2)]
+    if not well_formed(pairs):
+        return None
+    ends = [end_letters(a) for _, a in pairs]
+    top = collections.Counter(e[-1] for e in ends).most_common(1)[0][1]
+    return pairs if top / len(ends) >= 0.75 else None
+
+
+def read_manual_poems(folder):
+    """Poems in poems/*.txt: header lines, then one hemistich per line.
+
+    A line may also hold a whole verse with its halves split by * or a tab.
+    Poems in one file are separated by a line of ---, and a poem without
+    الشاعر or العصر takes them from the poem before it.
+    """
+    rows = []
+    for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        if not name.endswith(".txt"):
+            continue
+        with open(os.path.join(folder, name), encoding="utf-8") as fh:
+            blocks = re.split(r"(?m)^\s*-{3,}\s*$", fh.read())
+        inherited = {}
+        for n, block in enumerate(blocks, 1):
+            poem, lines = dict(inherited), []
+            for line in block.splitlines():
+                line = line.strip()
+                m = re.match(r"^(%s)\s*:\s*(.*)$" % "|".join(HEADERS), line)
+                if m and not lines:
+                    poem[HEADERS[m.group(1)]] = m.group(2).strip()
+                elif line:
+                    lines.extend(x.strip() for x in re.split(r"\s*[*\t]\s*", line) if x.strip())
+            if not lines:
+                continue
+            where = f"poems/{name}, القصيدة {n}"
+            if not poem.get("poet name"):
+                sys.exit(f"{where}: لا يوجد سطر «الشاعر:»")
+            if len(lines) % 2:
+                sys.exit(f"{where}: عدد الأشطر فردي ({len(lines)})، فلكل صدر عجز")
+            inherited = {k: poem[k] for k in ("poet name", "poet era") if k in poem}
+            rows.append({**{c: "" for c in HEADERS.values()}, **poem, "poem verses": lines})
+    return pd.DataFrame(rows, columns=list(HEADERS.values()) + ["poem verses"])
+
+
+def write_catalog(poems, poets):
+    """Lists every poem and poet in the database, to check what is already in."""
+    os.makedirs(CATALOG, exist_ok=True)
+    clean = lambda t: re.sub(r"\s+", " ", str(t)).strip()
+    per_poet = collections.Counter()
+    verses = collections.Counter()
+    with open(os.path.join(CATALOG, "poems.tsv"), "w", encoding="utf-8") as fh:
+        fh.write("الشاعر\tالقصيدة\tالأبيات\tالمصدر\n")
+        for poet_idx, title, url, count in sorted(poems, key=lambda p: (poets[p[0]][0], p[1])):
+            per_poet[poet_idx] += 1
+            verses[poet_idx] += count
+            fh.write(f"{poets[poet_idx][0]}\t{clean(title)}\t{count}\t{clean(url)}\n")
+    with open(os.path.join(CATALOG, "poets.tsv"), "w", encoding="utf-8") as fh:
+        fh.write("الشاعر\tالعصر\tالدرجة\tالقصائد\tالأبيات\n")
+        for i in sorted(range(len(poets)), key=lambda i: -verses[i]):
+            name, era, tier = poets[i]
+            fh.write(f"{name}\t{era}\t{tier}\t{per_poet[i]}\t{verses[i]}\n")
+
+
 def main(paths):
     alias = {}
     for idx, (_, _, _, names) in enumerate(POETS):
@@ -128,9 +211,14 @@ def main(paths):
     meter = df["poem meter"].fillna("")
     df = df[~meter.map(lambda m: any(x in m for x in EXCLUDED_METERS))].copy()
     df["rank"] = df["poem url"].map(source_rank)
+    df["manual"] = False
+    manual = read_manual_poems(MANUAL)
+    manual["rank"] = -1
+    manual["manual"] = True
+    df = pd.concat([manual[df.columns], df], ignore_index=True)
     df["poet_idx"] = df["poet name"].map(lambda n: alias.get(normalize(n)) if isinstance(n, str) else None)
     df["extra"] = df["poet_idx"].isna()
-    df = df[df["poet_idx"].notna() | ((df["rank"] == 0) & df["poet name"].map(lambda n: isinstance(n, str) and len(normalize(n)) > 1))]
+    df = df[df["poet_idx"].notna() | ((df["rank"] <= 0) & df["poet name"].map(lambda n: isinstance(n, str) and len(normalize(n)) > 1))]
     # Listed poets first, so their verses win over duplicates credited to others.
     df = df.sort_values(["extra", "rank"], kind="stable")
 
@@ -138,7 +226,7 @@ def main(paths):
     for row in df[df["extra"]].itertuples(index=False):
         name = normalize(row[4])
         if name not in alias:
-            era = re.sub(r"^العصر\s+(ال)?", "", row[5]).strip() if isinstance(row[5], str) else ""
+            era = re.sub(r"^(العصر\s+)?ال", "", row[5]).strip() if isinstance(row[5], str) else ""
             alias[name] = len(poets)
             poets.append([re.sub(r"\s+", " ", row[4]).strip(), era, 3])
     df["poet_idx"] = df["poet name"].map(lambda n: alias[normalize(n)])
@@ -148,20 +236,27 @@ def main(paths):
     verses = []
     poem_counter = 0
     stats = collections.Counter()
+    catalog = {}
 
     for row in df.itertuples(index=False):
         meter = row[1] if isinstance(row[1], str) else ""
         lines = [clean_line(x) for x in row[2]]
+        pairs = [(lines[i], lines[i + 1]) for i in range(0, len(lines) - 1, 2)]
+        if len(lines) % 2 or not well_formed(pairs):
+            fixed = None if row.manual else repair(lines)
+            if fixed:
+                pairs, lines = fixed, [x for pair in fixed for x in pair]
+                stats["repaired"] += 1
         if len(lines) < 2 or len(lines) % 2:
             stats["odd"] += 1
             continue
-        pairs = [(lines[i], lines[i + 1]) for i in range(0, len(lines), 2)]
-        ok = all(6 <= len(normalize(s)) <= 90 and 6 <= len(normalize(a)) <= 90 for s, a in pairs)
-        if not ok:
+        if not well_formed(pairs):
+            if row.manual:
+                print(f"تنبيه: «{row[0]}» لـ{row[4]} فيها شطر أقصر من ٦ أحرف أو أطول من ٩٠، فلم تُضَف")
             stats["bad_len"] += 1
             continue
         ends = [end_letters(a) for _, a in pairs]
-        if not meter and not looks_classical(pairs, ends, poets[int(row.poet_idx)][1]):
+        if not meter and not row.manual and not looks_classical(pairs, ends, poets[int(row.poet_idx)][1]):
             stats["not_classical"] += 1
             continue
         rawis = poem_rawi(ends)
@@ -179,12 +274,15 @@ def main(paths):
             poem = (poem_counter, poet_idx, clean_line(row[0] if isinstance(row[0], str) else ""), row[3] if isinstance(row[3], str) else "", meter_name)
             verses.append((key(s), [s, a, r, d, 1 if i == 0 else 0], poem))
             stats["verses"] += 1
+            stats["manual"] += row.manual
+            catalog.setdefault(poem_counter, [poet_idx, poem[2], poem[3], 0])[3] += 1
 
     # Drop added poets whose poems were all filtered out.
     kept = set(range(len(POETS))) | {poem[1] for _, _, poem in verses}
     remap = {old: new for new, old in enumerate(sorted(kept))}
     poets = [p for i, p in enumerate(poets) if i in kept]
     verses = [(k, v, (poem[0], remap[poem[1]]) + poem[2:]) for k, v, poem in verses]
+    write_catalog([[remap[p], t, u, n] for p, t, u, n in catalog.values()], poets)
 
     # Shard by the first two letters, using longer prefixes for crowded ones.
     counts = collections.Counter(k[:n] for k, _, _ in verses for n in range(2, 6))

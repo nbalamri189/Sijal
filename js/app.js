@@ -1,11 +1,11 @@
 import {
   ALPHABET, LETTER_NAMES, arNum, firstLetterIndex, key, letterIndexFromEnd, letterSpan, similarity,
-} from "./arabic.js?v=9";
-import { letterCount, loadIndex, matchVerse, pickVerse, randomVerse } from "./db.js?v=9";
+} from "./arabic.js?v=10";
+import { letterCount, loadIndex, matchVerse, pickVerse, randomVerse } from "./db.js?v=10";
 import {
   DAILY_SIZE, SITE_URL, arCount, challengeURL, clearChallengeFromURL, copyText, dailyLetters, dailyNumber,
   gridEmoji, msUntilTomorrow, openWhatsApp, readChallenge, renderResultImage, shareImage, verseShareText,
-} from "./share.js?v=9";
+} from "./share.js?v=10";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -1041,7 +1041,7 @@ if (Recognition) {
 // Phones often restore an old tab from memory instead of reloading it, which
 // keeps an outdated copy of the game running. Ask the server (bypassing the
 // cache) which version is current, and move to it whenever no game is running.
-const APP_VERSION = 9;
+const APP_VERSION = 10;
 let newerVersion = 0;
 
 async function checkForUpdate() {
