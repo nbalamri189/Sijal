@@ -31,6 +31,12 @@ class RawiTest(unittest.TestCase):
         poem = rawi("وَلا أَدَبُ", "فَإِن هُمُ ذَهَبَت أَخلاقُهُم ذَهَبوا", "يَنتَسِبُ", "وَالحَسَبُ")
         self.assertEqual(poem[1], ("ب", 3))
 
+    def test_wasl_written_in_some_verses_only(self):
+        poem = rawi("هوينك إن ماء الوجه غالي", "فهاك الشعر ينثر كاللآلي", "لأطلع من يمينك والشمال",
+                    "وما للمرء من بعد الكمال", "على ما كان من سوء الفعال")
+        self.assertEqual({r for r, _ in poem}, {"ل"})
+        self.assertEqual([d for _, d in poem], [2, 2, 1, 1, 1])
+
     def test_hamza_and_ta_marbuta(self):
         self.assertEqual(rawi("وَداوِني بِالَّتي كانَت هِيَ الداءُ")[0][0], "ا")
         self.assertEqual(rawi("قَد طالَ بي هَمُّ المَحَبَّة")[0][0], "ه")

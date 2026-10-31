@@ -77,9 +77,13 @@ def poem_rawi(ends):
         return ch, n / len(chars)
 
     ch, frac = mode_at(1)
-    if frac < 0.75:
-        return [verse_fallback(e) for e in ends]
     p = 1
+    if frac < 0.75:
+        # A وصل letter written in some verses only: «غالي» beside «الشمال».
+        bare = [e[:-1] if len(e) > 1 and e[-1] in TRAILING else e for e in ends]
+        ch, n = collections.Counter(e[-1:] for e in bare).most_common(1)[0]
+        if n / len(ends) < 0.75 or ch in TRAILING:
+            return [verse_fallback(e) for e in ends]
     while p < 3 and ch in TRAILING:
         nxt, nfrac = mode_at(p + 1)
         if nfrac < 0.75:
