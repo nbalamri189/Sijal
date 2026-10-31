@@ -8,7 +8,8 @@ Usage:
     python3 tools/build_data.py path/to/train-00000.parquet path/to/train-00001.parquet
 
 Poets listed in tools/poets.py come from every source. All other poets on
-aldiwan.net are added too, as tier 3, with the era the dataset gives them.
+aldiwan.net are added too, as tier 3, with the era the dataset gives them, and
+so is every pre-Islamic and مخضرم poet, from every source.
 Poems typed or pasted into poems/*.txt are added as well (see poems/README.md);
 they win over the dataset's copy of the same verse.
 
@@ -35,6 +36,8 @@ MANUAL = os.path.join(ROOT, "poems")
 CATALOG = os.path.join(ROOT, "catalog")
 HEADERS = {"الشاعر": "poet name", "القصيدة": "poem title", "البحر": "poem meter", "المصدر": "poem url", "العصر": "poet era"}
 
+# Eras whose poets all come in from every source, whatever site lists them.
+EARLY_ERAS = {"العصر الجاهلي": "جاهلي", "قبل الإسلام": "جاهلي", "المخضرمين": "مخضرم"}
 EXCLUDED_METERS = ("تفعيل", "نثر", "موشح", "عامي", "شعبي", "نبطي", "شعر حر", "الحر")
 # Letters that can be وصل/خروج after the روي, so the روي may sit before them.
 TRAILING = set("اويه")
@@ -222,7 +225,10 @@ def main(paths):
     df = pd.concat([manual[df.columns], df], ignore_index=True)
     df["poet_idx"] = df["poet name"].map(lambda n: alias.get(normalize(n)) if isinstance(n, str) else None)
     df["extra"] = df["poet_idx"].isna()
-    df = df[df["poet_idx"].notna() | ((df["rank"] <= 0) & df["poet name"].map(lambda n: isinstance(n, str) and len(normalize(n)) > 1))]
+    named = df["poet name"].map(lambda n: isinstance(n, str) and len(normalize(n)) > 1)
+    early = df[named & df["poet era"].isin(EARLY_ERAS.keys())]
+    early = early.groupby(early["poet name"].map(normalize))["poet era"].agg(lambda e: EARLY_ERAS[e.mode()[0]])
+    df = df[df["poet_idx"].notna() | (named & ((df["rank"] <= 0) | df["poet name"].map(lambda n: normalize(str(n)) in early)))]
     # Listed poets first, so their verses win over duplicates credited to others.
     df = df.sort_values(["extra", "rank"], kind="stable")
 
@@ -230,9 +236,9 @@ def main(paths):
     for row in df[df["extra"]].itertuples(index=False):
         name = normalize(row[4])
         if name not in alias:
-            era = re.sub(r"^(العصر\s+)?ال", "", row[5]).strip() if isinstance(row[5], str) else ""
+            era = early.get(name) or (re.sub(r"^(العصر\s+)?ال", "", row[5]).strip() if isinstance(row[5], str) else "")
             alias[name] = len(poets)
-            poets.append([re.sub(r"\s+", " ", row[4]).strip(), era, 3])
+            poets.append([re.sub(r"\s+", " ", strip_diacritics(row[4])).strip(), era, 3])
     df["poet_idx"] = df["poet name"].map(lambda n: alias[normalize(n)])
 
     seen = set()
