@@ -7,9 +7,9 @@ the game comes from this dataset, with a link back to the poem's source page.
 Usage:
     python3 tools/build_data.py path/to/train-00000.parquet path/to/train-00001.parquet
 
-Poets listed in tools/poets.py come from every source. All other poets on
-aldiwan.net are added too, as tier 3, with the era the dataset gives them, and
-so is every pre-Islamic and مخضرم poet, from every source.
+Every poet in the dataset is included, from every source. Poets listed in
+tools/poets.py get the name, era and tier given there; all others are tier 3
+with the era the dataset gives them.
 Poems typed or pasted into poems/*.txt are added as well (see poems/README.md);
 they win over the dataset's copy of the same verse.
 
@@ -36,12 +36,13 @@ MANUAL = os.path.join(ROOT, "poems")
 CATALOG = os.path.join(ROOT, "catalog")
 HEADERS = {"الشاعر": "poet name", "القصيدة": "poem title", "البحر": "poem meter", "المصدر": "poem url", "العصر": "poet era"}
 
-# Eras whose poets all come in from every source, whatever site lists them.
+# Era names used for a poet that one source dates and another does not.
 EARLY_ERAS = {"العصر الجاهلي": "جاهلي", "قبل الإسلام": "جاهلي", "المخضرمين": "مخضرم"}
 EXCLUDED_METERS = ("تفعيل", "نثر", "موشح", "عامي", "شعبي", "نبطي", "شعر حر", "الحر")
 # Letters that can be وصل/خروج after the روي, so the روي may sit before them.
 TRAILING = set("اويه")
 MAX_SHARD = 2500
+MAX_PREFIX = 7  # longest shard prefix; js/db.js shardFor() must match
 
 
 def end_letters(text):
@@ -228,7 +229,7 @@ def main(paths):
     named = df["poet name"].map(lambda n: isinstance(n, str) and len(normalize(n)) > 1)
     early = df[named & df["poet era"].isin(EARLY_ERAS.keys())]
     early = early.groupby(early["poet name"].map(normalize))["poet era"].agg(lambda e: EARLY_ERAS[e.mode()[0]])
-    df = df[df["poet_idx"].notna() | (named & ((df["rank"] <= 0) | df["poet name"].map(lambda n: normalize(str(n)) in early)))]
+    df = df[df["poet_idx"].notna() | named]
     # Listed poets first, so their verses win over duplicates credited to others.
     df = df.sort_values(["extra", "rank"], kind="stable")
 
@@ -295,10 +296,10 @@ def main(paths):
     write_catalog([[remap[p], t, u, n] for p, t, u, n in catalog.values()], poets)
 
     # Shard by the first two letters, using longer prefixes for crowded ones.
-    counts = collections.Counter(k[:n] for k, _, _ in verses for n in range(2, 6))
+    counts = collections.Counter(k[:n] for k, _, _ in verses for n in range(2, MAX_PREFIX + 1))
     for k, verse, poem in verses:
         n = 2
-        while n < 5 and len(k) > n and counts[k[:n]] > MAX_SHARD:
+        while n < MAX_PREFIX and len(k) > n and counts[k[:n]] > MAX_SHARD:
             n += 1
         prefix = k[:n]
         shard = shards["-".join(f"{ord(c):04x}" for c in prefix)]

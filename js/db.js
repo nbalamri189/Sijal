@@ -1,5 +1,5 @@
 // Verse database: lazy-loaded shards keyed by the first letters of a verse.
-import { key, startLetter, similarity } from "./arabic.js?v=13";
+import { key, startLetter, similarity } from "./arabic.js?v=14";
 
 let index = null;
 const shardNames = new Set();
@@ -7,7 +7,7 @@ const shardCache = new Map();
 
 export async function loadIndex() {
   if (index) return index;
-  const res = await fetch("data/index.json?v=13");
+  const res = await fetch("data/index.json?v=14");
   if (!res.ok) throw new Error("تعذّر تحميل قاعدة الأبيات");
   index = await res.json();
   for (const info of Object.values(index.letters)) {
@@ -28,8 +28,11 @@ function shardName(k, n) {
   return Array.from(k.slice(0, n), (c) => c.charCodeAt(0).toString(16).padStart(4, "0")).join("-");
 }
 
+// MAX_PREFIX in tools/build_data.py: the longest prefix a shard is named by.
+const MAX_PREFIX = 7;
+
 function shardFor(k) {
-  for (let n = Math.min(5, k.length); n >= 2; n--) {
+  for (let n = Math.min(MAX_PREFIX, k.length); n >= 2; n--) {
     const name = shardName(k, n);
     if (shardNames.has(name)) return name;
   }

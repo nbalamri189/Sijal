@@ -2,10 +2,10 @@
 
 Each entry: (display name, era, tier, [names as they appear in the source dataset]).
 Tier 1 poets are the best known; the computer opponent prefers their verses.
-build_data.py adds every other poet on aldiwan.net after these, as tier 3,
-and every pre-Islamic and مخضرم poet from any source.
-A poet listed here gets their poems from every source in the dataset; poems
-the dataset lacks can be added by hand in poems/ (see poems/README.md).
+build_data.py adds every other poet in the dataset after these, as tier 3.
+List a poet here to set their name, era and tier, or to merge the names they
+appear under; poems the dataset lacks can be added by hand in poems/ (see
+poems/README.md).
 """
 
 POETS = [
